@@ -27,7 +27,7 @@ namespace webrtc_csharp_demo
             var conn = new IceConnection(config);
             Channel channel1 = null;
 
-            conn.OnChannelAdded += (object sender, Channel channel) =>
+            conn.ChannelAdded += (object sender, Channel channel) =>
             {
                 Console.WriteLine($"Got a new channel {channel.Name}");
                 channel1 = channel;
@@ -35,13 +35,25 @@ namespace webrtc_csharp_demo
                 {
                     Console.WriteLine($"new message: {data}");
                 };
+                channel1.StateChanged += (object sender2, Channel.ChannelState state) =>
+                {
+                    Console.WriteLine($"new channel state: {state}");
+                };
             };
+
             await conn.Initialize();
 
             string cmd;
             while ((cmd = Console.ReadLine()) != null)
             {
-                channel1?.SendMessage(cmd);
+                if (cmd == "bye")
+                {
+                    conn.Close();
+                }
+                else
+                {
+                    channel1?.SendMessage(cmd);
+                }
             }
         }
 

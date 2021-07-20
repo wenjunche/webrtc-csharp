@@ -24,7 +24,7 @@ namespace webrtc_csharp_demo
         public string PairCode
         { get; set; }
 
-        public EventHandler<Channel> OnChannelAdded
+        public EventHandler<Channel> ChannelAdded
         { get; set; }
 
 
@@ -91,7 +91,7 @@ namespace webrtc_csharp_demo
 
         private void PeerConnection_DataChannelRemoved(DataChannel channel)
         {
-            Console.WriteLine($"data channel removed ${channel.Label}");
+            Console.WriteLine($"data channel removed {channel.Label}");
             if (this.defaultChannelName != channel.Label)
             {
                 var c = new Channel(channel);
@@ -102,11 +102,15 @@ namespace webrtc_csharp_demo
         private void PeerConnection_DataChannelAdded(DataChannel channel)
         {
             Console.WriteLine($"data channel added ${channel.Label}");
+            var c = new Channel(channel);
             if (this.defaultChannelName != channel.Label)
             {
-                var c = new Channel(channel);
                 this.channels.Add(c.Name, c);
-                this.OnChannelAdded?.Invoke(this, c);
+                this.ChannelAdded?.Invoke(this, c);
+            }
+            else
+            {
+                this.defaultChannel = c;
             }
         }
 
@@ -193,6 +197,16 @@ namespace webrtc_csharp_demo
         private void PeerConnection_IceStateChanged(IceConnectionState newState)
         {
             Console.WriteLine($"ICE state: {newState}");
+            switch (newState)
+            {
+                case IceConnectionState.Disconnected:
+                case IceConnectionState.Failed:
+                    if (this.peerConnectionInitialized)
+                    {
+                        this.Close();
+                    }
+                    break;
+            }
         }
 
         private void PeerConnection_IceGatheringStateChanged(IceGatheringState newState)
@@ -214,14 +228,14 @@ namespace webrtc_csharp_demo
             }
         }
 
-        private void InitializeOffer()
+        private async void InitializeOffer()
         {
             Console.WriteLine($"Initialize offer {this.configuration.PairingCode}");
-            this.CreateDefaultChannel();
+            await this.CreateDefaultChannel();
             this.CreateOffer();
         }
 
-        private async void CreateDefaultChannel()
+        private async Task CreateDefaultChannel()
         {
             Console.WriteLine($"Creating default channel");
             var channel = await this.peerConnection.AddDataChannelAsync(this.defaultChannelName, true, true);
@@ -240,6 +254,26 @@ namespace webrtc_csharp_demo
             var channel = new Channel(dataChannel);
             this.channels.Add(channel.Name, channel);
             return channel;
+        }
+
+        public void Close()
+        {
+            Console.WriteLine($"cleaning up {this.configuration.PairingCode}");
+            this.peerTrickleReady = false;
+            this.peerConnectionInitialized = false;
+
+            // https://github.com/microsoft/MixedReality-WebRTC/issues/793
+            // this.peerConnection.RemoveDataChannel(this.defaultChannel.DataChannel);
+            /* https://github.com/microsoft/MixedReality-WebRTC/issues/722
+            this.peerConnection.RemoveDataChannel(this.defaultChannel.DataChannel);
+            foreach (KeyValuePair<string, Channel> item in this.channels)
+            {
+                Console.WriteLine($"removing channel {item.Key}");
+                this.peerConnection.RemoveDataChannel(item.Value.DataChannel);
+            }
+            */
+
+            this.channels.Clear();
         }
     }
 

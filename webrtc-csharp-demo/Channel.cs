@@ -35,7 +35,10 @@ namespace webrtc_csharp_demo
             Closed = 3
         }
 
-        private DataChannel dataChannel;
+        internal DataChannel DataChannel
+        {
+            get;
+        }
 
         public EventHandler<string> MessageReceived
         { get; set; }
@@ -44,16 +47,16 @@ namespace webrtc_csharp_demo
 
         public Channel(DataChannel dataChannel)
         {
-            this.dataChannel = dataChannel;
+            this.DataChannel = dataChannel;
 
-            this.dataChannel.MessageReceived += DataChannel_MessageReceived;
-            this.dataChannel.StateChanged += DataChannel_StateChanged;
+            this.DataChannel.MessageReceived += DataChannel_MessageReceived;
+            this.DataChannel.StateChanged += DataChannel_StateChanged;
         }
 
         private void DataChannel_StateChanged()
         {
-            Console.WriteLine($"channel ${this.Name} state change {this.dataChannel.State}");
-            this.StateChanged?.Invoke(this, (ChannelState) this.dataChannel.State);
+            Console.WriteLine($"channel {this.Name} state change {this.DataChannel.State}");
+            this.StateChanged?.Invoke(this, (ChannelState) this.DataChannel.State);
         }
 
         private void DataChannel_MessageReceived(byte[] obj)
@@ -64,13 +67,18 @@ namespace webrtc_csharp_demo
 
         public string Name
         {
-            get { return this.dataChannel.Label;  }
+            get { return this.DataChannel.Label;  }
         }
 
         public void SendMessage(string data)
         {
             var bytes = Encoding.UTF8.GetBytes(data);
-            this.dataChannel.SendMessage(bytes);
+            this.DataChannel.SendMessage(bytes);
+        }
+
+        public void Close()
+        {
+            // looks like Close not supported in DataChannel class
         }
     }
 }
